@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use eet51_lab3::{golomb_encode, image_to_bytes, golomb_decode, bytes_to_image};
+use eet51_lab3::{golomb_encode, image_to_bytes, golomb_decode, bytes_to_image, huffman_encode::{huffman_encode, weighted_path_length}};
 use image::{buffer::Pixels, Luma, GrayImage};
 use serde::Serialize;
 use ndarray::Array2;
@@ -216,6 +216,36 @@ fn complete_tasks(img: &GrayImage, img_name: &str) {
     let decoded = golomb_decode(m, &encoded);
     let decoded_image = bytes_to_image(&decoded, img.width(), img.height());
     verify_equality_imgs(&abs_reconstructed_image, &decoded_image);
+
+    // Comparison with Huffman encoding
+    println!();
+    println!("Huffman encoding");
+    // encode original image
+    let original_bytes = image_to_bytes(img);
+    let encoded = huffman_encode(&original_bytes);
+    // print the bits
+    println!("Original image size: {} bits", original_bytes.len() * 8);
+    println!("Encoded image size: {} bits", encoded.len());
+
+    // weighted_path_length
+    let wpl = weighted_path_length(&original_bytes);
+    println!("Weighted path length: {}", wpl);
+
+    // Compression ratio
+    println!("Compression ratio: {}", (original_bytes.len() * 8) as f32 / encoded.len() as f32);
+
+    // encode absolute value of prediction error matrix
+    let encoded = huffman_encode(&abs_bytes);
+    // print the bits
+    println!("Original image size: {} bits", abs_bytes.len() * 8);
+    println!("Encoded image size: {} bits", encoded.len());
+
+    // weighted_path_length
+    let wpl = weighted_path_length(&abs_bytes);
+    println!("Weighted path length: {}", wpl);
+
+    // Compression ratio
+    println!("Compression ratio: {}", (abs_bytes.len() * 8) as f32 / encoded.len() as f32);
 
 }
 

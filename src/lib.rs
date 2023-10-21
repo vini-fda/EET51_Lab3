@@ -1,3 +1,5 @@
+pub mod huffman_encode;
+
 use image::GrayImage;
 
 /*

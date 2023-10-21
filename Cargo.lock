@@ -126,6 +126,7 @@ dependencies = [
  "csv",
  "image",
  "ndarray",
+ "num-traits",
  "serde",
 ]
 
