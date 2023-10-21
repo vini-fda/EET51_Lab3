@@ -1,6 +1,6 @@
-# EET-51 Lab 3
+# EET-51 Lab 3: Compressão de Imagens sem Perda de Informação
 
-Implementação do código de Golomb e processamento de imagens em Rust.
+Implementação do código de Golomb para compressão de imagens em Rust, bem como levantamento de histogramas, cálculo de entropia e cálculo da taxa de compressão.
 
 ## Dependências
 
