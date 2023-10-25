@@ -8,7 +8,7 @@ pub struct CustomPixel {
     pub value: u8,
 }
 
-pub fn custom_encode(data: &[CustomPixel]) -> Vec<u8> {
+pub fn custom_encode(data: &[CustomPixel]) -> (u8, Vec<u8>) {
     let mut mean = 0.0;
     // mean of the values
     for &n in data {
@@ -19,7 +19,7 @@ pub fn custom_encode(data: &[CustomPixel]) -> Vec<u8> {
     while (m as f32) < mean / 2.0 {
         m *= 2;
     }
-    todo!()
+    (m, custom_encode_inner(data, m))
 }
 
 pub fn custom_encode_inner(data: &[CustomPixel], m: u8) -> Vec<u8> {
