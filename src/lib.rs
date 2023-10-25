@@ -1,4 +1,5 @@
 pub mod huffman_encode;
+pub mod custom_encode;
 
 use image::GrayImage;
 
