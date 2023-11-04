@@ -192,14 +192,19 @@ fn complete_tasks(img: &GrayImage, img_name: &str) {
     let abs_prediction_err = prediction_err.mapv(|x| x.abs());
     let abs_reconstructed_image = convert_to_grayscale_image(&abs_prediction_err);
 
-    // Task G (Item 8): calculate the entropy of the absolute value of the prediction error matrix
-    let abs_histogram = grayscale_histogram(abs_reconstructed_image.pixels());
-    let mut abs_relative_freq = BTreeMap::new();
-    for (&key, &value) in abs_histogram.iter() {
-        abs_relative_freq.insert(key, value as f32 / (img.width() * img.height()) as f32);
+    // Task G (Item 8): calculate the entropy of the sign of the prediction error matrix
+    let pixel_signs: Vec<bool> = prediction_err.iter().map(|&x| x < 0).collect();
+    let mut pixel_signs_histogram = BTreeMap::new();
+    for &sign in pixel_signs.iter() {
+        let count = pixel_signs_histogram.entry(sign).or_insert(0);
+        *count += 1;
     }
-    let abs_entropy = calculate_entropy(&abs_relative_freq);
-    println!("Absolute entropy: {}", abs_entropy);
+    let mut pixel_signs_relative_freq = BTreeMap::new();
+    for (&key, &value) in pixel_signs_histogram.iter() {
+        pixel_signs_relative_freq.insert(key, value as f32 / (img.width() * img.height()) as f32);
+    }
+    let pixel_signs_entropy = calculate_entropy(&pixel_signs_relative_freq);
+    println!("Entropy of the sign of the prediction error matrix: {}", pixel_signs_entropy);
 
     // Task H (Item 9): Use the Golomb encoding function to encode the absolute value of the prediction error matrix
     let abs_bytes = image_to_bytes(&abs_reconstructed_image);
