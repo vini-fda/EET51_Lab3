@@ -56,16 +56,6 @@ where
                 left.dot_helper(f, left_id, codes)?;
                 right.dot_helper(f, right_id, codes)?;
             }
-            // HuffmanNode::Leaf { value, frequency } => {
-            //     // Terminal nodes (Leaf)
-            //     // Here we use HTML-like labels to create the two-part label with different styles
-            //     writeln!(f, "    node{} [shape=box, style=\"rounded,filled\", fillcolor=lightblue, label=<", id)?;
-            //     writeln!(f, "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\">")?;
-            //     writeln!(f, "<TR><TD>{:?}</TD></TR>", value)?;
-            //     writeln!(f, "<TR><TD ALIGN=\"RIGHT\" ><FONT POINT-SIZE=\"10\">{}</FONT></TD></TR>", frequency)?;
-            //     writeln!(f, "</TABLE>")?;
-            //     writeln!(f, ">];")?;
-            // }
             HuffmanNode::Leaf { value, frequency } => {
                 // Retrieve the Huffman code for the current value.
                 let code = codes.get(value).expect("Code not found for value");
