@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use eet51_lab3::{golomb_encode, image_to_bytes, golomb_decode, bytes_to_image, huffman_encode::{huffman_encode, weighted_path_length}};
+use eet51_lab3::{huffman::huffman_encode, histogram::Histogram, entropy::{histogram_entropy, data_entropy}, golomb::encode::custom_encode};
 use image::{buffer::Pixels, Luma, GrayImage};
 use serde::Serialize;
 use ndarray::Array2;
@@ -160,29 +160,18 @@ fn convert_to_grayscale_image(matrix: &Array2<i32>) -> GrayImage {
 
 fn complete_tasks(img: &GrayImage, img_name: &str) {
     // Task A (Item 2): calculate the relative frequency of each pixel value in the image
-    let histogram = grayscale_histogram(img.pixels());
-    let mut relative_freq = BTreeMap::new();
-    for (&key, &value) in histogram.iter() {
-        relative_freq.insert(key, value as f32 / (img.width() * img.height()) as f32);
-    }
-    let filename = format!("{}.csv", img_name);
-    save_to_csv(&relative_freq, &filename);
+    let histogram = Histogram::from_iter(img.pixels().map(|p| p[0]));
+    // save to csv
+    let path = format!("{}.csv", img_name);
+    histogram.to_csv(&path, 0, 255).unwrap();
     // Task B (Item 3): calculate the entropy of a pixel modeled as a random variable
-    let entropy = calculate_entropy(&relative_freq);
-    println!("Entropy: {}", entropy);
+    let entropy = histogram_entropy(&histogram);
+    println!("H(I): {}", entropy);
     // Task C (Item 4): calculate the prediction error matrix
     let prediction_err = prediction_err_matrix(img);
-    println!("Prediction error matrix: {:?}", prediction_err);
-
     // Task D (Item 5): calculate the entropy of the prediction error matrix
-    let matrix_histogram = matrix_histogram(&prediction_err);
-    let mut matrix_relative_freq = BTreeMap::new();
-    for (&key, &value) in matrix_histogram.iter() {
-        matrix_relative_freq.insert(key, value as f32 / (img.width() * img.height()) as f32);
-    }
-    let matrix_entropy = calculate_entropy(&matrix_relative_freq);
-    println!("Prediction error matrix entropy: {}", matrix_entropy);
-
+    let matrix_entropy = data_entropy(&prediction_err);
+    println!("H(P): {}", matrix_entropy);
     // Task E (Item 6): reconstruct the image from the prediction error matrix
     let reconstructed_image = reconstruct_image_from_pred_err_matrix(&prediction_err);
     //verify that they are equal
@@ -190,68 +179,51 @@ fn complete_tasks(img: &GrayImage, img_name: &str) {
 
     // Task F (Item 7): create a new image from the absolute value of the prediction error matrix
     let abs_prediction_err = prediction_err.mapv(|x| x.abs());
-    let abs_reconstructed_image = convert_to_grayscale_image(&abs_prediction_err);
 
     // Task G (Item 8): calculate the entropy of the sign of the prediction error matrix
-    let pixel_signs: Vec<bool> = prediction_err.iter().map(|&x| x < 0).collect();
-    let mut pixel_signs_histogram = BTreeMap::new();
-    for &sign in pixel_signs.iter() {
-        let count = pixel_signs_histogram.entry(sign).or_insert(0);
-        *count += 1;
-    }
-    let mut pixel_signs_relative_freq = BTreeMap::new();
-    for (&key, &value) in pixel_signs_histogram.iter() {
-        pixel_signs_relative_freq.insert(key, value as f32 / (img.width() * img.height()) as f32);
-    }
-    let pixel_signs_entropy = calculate_entropy(&pixel_signs_relative_freq);
-    println!("Entropy of the sign of the prediction error matrix: {}", pixel_signs_entropy);
+    // and of the absolute value of the prediction error matrix
+    let abs_prediction_err_entropy = data_entropy(&abs_prediction_err);
+    let pixel_signs = prediction_err.iter().map(|&x| x < 0);
+    let pixel_signs_entropy = data_entropy(pixel_signs);
+    println!("H(|P|): {}", abs_prediction_err_entropy);
+    println!("H(sgn(P)): {}", pixel_signs_entropy);
 
-    // Task H (Item 9): Use the Golomb encoding function to encode the absolute value of the prediction error matrix
-    let abs_bytes = image_to_bytes(&abs_reconstructed_image);
-    let (m, encoded) = golomb_encode(&abs_bytes);
-    // print the difference in bytes
-    println!("Original image size: {} bytes", abs_bytes.len());
-    println!("Encoded image size: {} bytes", encoded.len());
-    // Compression ratio
-    println!("Compression ratio: {}", abs_bytes.len() as f32 / encoded.len() as f32);
-    // Percentage ratio of image size
-    println!("Percentage of original image size: {:.2}%", encoded.len() as f32 / abs_bytes.len() as f32 * 100.0);
+    // Task H (Item 9): Use the Custom Golomb encoding function to encode the prediction error matrix
+    println!("================");
+    println!("Custom encoding w/ Golomb");
+    println!("================");
+    let img_pixels = img.width() * img.height();
+    let custom_encoded = custom_encode(&prediction_err);
+    println!("Original image size: {} bits", img_pixels * 9);
+    println!("Encoded image size: {} bits", custom_encoded.bits());
+    println!("Compression ratio of P: {}", (img_pixels * 9) as f32 / custom_encoded.bits() as f32);
+    println!("m: {}", custom_encoded.m);
 
     // This is not a task, but we will decode the encoded bytes and verify that they are equal
-    let decoded = golomb_decode(m, &encoded);
-    let decoded_image = bytes_to_image(&decoded, img.width(), img.height());
-    verify_equality_imgs(&abs_reconstructed_image, &decoded_image);
+    let custom_decoded = custom_encoded.decode();
+    verify_equality_arrays(&prediction_err, &custom_decoded);
 
     // Comparison with Huffman encoding
-    println!();
+    println!("================");
     println!("Huffman encoding");
+    println!("================");
     // encode original image
-    let original_bytes = image_to_bytes(img);
-    let encoded = huffman_encode(&original_bytes);
+    let encoded = huffman_encode(img.pixels().map(|p| p[0]));
     // print the bits
-    println!("Original image size: {} bits", original_bytes.len() * 8);
+    println!("Original image size: {} bits", img_pixels * 8);
     println!("Encoded image size: {} bits", encoded.len());
 
-    // weighted_path_length
-    let wpl = weighted_path_length(&original_bytes);
-    println!("Weighted path length: {}", wpl);
-
     // Compression ratio
-    println!("Compression ratio: {}", (original_bytes.len() * 8) as f32 / encoded.len() as f32);
+    println!("Compression ratio: {}", (img_pixels * 8) as f32 / encoded.len() as f32);
 
-    // encode absolute value of prediction error matrix
-    let encoded = huffman_encode(&abs_bytes);
+    // encode prediction error matrix
+    let encoded = huffman_encode(prediction_err.iter());
     // print the bits
-    println!("Original image size: {} bits", abs_bytes.len() * 8);
+    println!("Original image size: {} bits", prediction_err.len() * 9);
     println!("Encoded image size: {} bits", encoded.len());
 
-    // weighted_path_length
-    let wpl = weighted_path_length(&abs_bytes);
-    println!("Weighted path length: {}", wpl);
-
     // Compression ratio
-    println!("Compression ratio: {}", (abs_bytes.len() * 8) as f32 / encoded.len() as f32);
-
+    println!("Compression ratio: {}", (prediction_err.len() * 9) as f32 / encoded.len() as f32);
 }
 
 /// Verify that two grayscale images are equal
@@ -270,6 +242,18 @@ fn verify_equality_imgs(a: &GrayImage, b: &GrayImage) {
         }
     }
     println!("Images are equal");
+}
+
+fn verify_equality_arrays(a: &Array2<i32>, b: &Array2<i32>) {
+    if a.dim() != b.dim() {
+        panic!("Arrays are not equal: dimensions are different");
+    }
+    for (x, y) in a.indexed_iter() {
+        if *y != b[[x.0, x.1]] {
+            panic!("Arrays are not equal at ({}, {}): {} != {}", x.0, x.1, *y, b[[x.0, x.1]]);
+        }
+    }
+    println!("Arrays are equal");
 }
 
 
