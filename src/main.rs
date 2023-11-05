@@ -1,57 +1,13 @@
-use std::collections::BTreeMap;
 use eet51_lab3::{huffman::huffman_encode, histogram::Histogram, entropy::{histogram_entropy, data_entropy}, golomb::encode::custom_encode};
-use image::{buffer::Pixels, Luma, GrayImage};
+use image::GrayImage;
 use serde::Serialize;
 use ndarray::Array2;
 use std::env;
-
-fn grayscale_histogram(pixels: Pixels<'_, Luma<u8>>) -> BTreeMap<u8, u32> {
-    let mut histogram = BTreeMap::new();
-    // 0 - 255
-    for i in 0..=255 {
-        histogram.insert(i, 0);
-    }
-    for pixel in pixels {
-        let count = histogram.entry(pixel.0[0]).or_insert(0);
-        *count += 1;
-    }
-    histogram
-}
-
-fn matrix_histogram(matrix: &Array2<i32>) -> BTreeMap<i32, u32> {
-    let mut histogram = BTreeMap::new();
-    for pixel in matrix.iter() {
-        let count = histogram.entry(*pixel).or_insert(0);
-        *count += 1;
-    }
-    histogram
-}
 
 #[derive(Serialize)]
 struct PixelFrequency {
     pixel: u8,
     frequency: f32,
-}
-
-fn save_to_csv(histogram: &BTreeMap<u8, f32>, filename: &str) {
-    let mut wtr = csv::Writer::from_path(filename).unwrap();
-    for (key, value) in histogram.iter() {
-        wtr.serialize(PixelFrequency {
-            pixel: *key,
-            frequency: *value,
-        }).unwrap();
-    }
-    wtr.flush().unwrap();
-}
-
-fn calculate_entropy<T>(histogram: &BTreeMap<T, f32>) -> f32 {
-    let mut entropy = 0.0;
-    for (_, &value) in histogram.iter() {
-        if value > 0.0 {
-            entropy -= value * value.log2();
-        }
-    }
-    entropy
 }
 
 // create a new image with the same dimensions as the original
@@ -136,26 +92,6 @@ fn reconstruct_image_from_pred_err_matrix(matrix: &Array2<i32>) -> GrayImage {
         }
     }
     reconstructed_image
-}
-
-fn convert_to_grayscale_image(matrix: &Array2<i32>) -> GrayImage {
-    let (width, height) = matrix.dim();
-    let mut new_image = GrayImage::new(width as u32, height as u32);
-    for x in 0..width {
-        for y in 0..height {
-            let pixel = matrix[[x, y]];
-            //cap the value at 0 and 255
-            let pixel = if pixel < 0 {
-                0u8
-            } else if pixel > 255 {
-                255u8
-            } else {
-                pixel as u8
-            };
-            new_image.put_pixel(x as u32, y as u32, image::Luma([pixel]));
-        }
-    }
-    new_image
 }
 
 fn complete_tasks(img: &GrayImage, img_name: &str) {
