@@ -1,4 +1,5 @@
-use eet51_lab3::{huffman::huffman_encode, histogram::Histogram, entropy::{histogram_entropy, data_entropy}, golomb::encode::custom_encode};
+use std::io::Write;
+use eet51_lab3::{huffman::{huffman_encode, weighted_path_length, huffman_tree}, histogram::Histogram, entropy::{histogram_entropy, data_entropy}, golomb::encode::custom_encode};
 use image::GrayImage;
 use serde::Serialize;
 use ndarray::Array2;
@@ -146,20 +147,33 @@ fn complete_tasks(img: &GrayImage, img_name: &str) {
     // encode original image
     let encoded = huffman_encode(img.pixels().map(|p| p[0]));
     // print the bits
-    println!("Original image size: {} bits", img_pixels * 8);
-    println!("Encoded image size: {} bits", encoded.len());
+    println!("Original image size (I): {} bits", img_pixels * 8);
+    println!("Encoded image size (I): {} bits", encoded.len());
 
     // Compression ratio
-    println!("Compression ratio: {}", (img_pixels * 8) as f32 / encoded.len() as f32);
+    println!("Compression ratio (I): {}", (img_pixels * 8) as f32 / encoded.len() as f32);
+
+    let weighted_path_length_orig = weighted_path_length(img.pixels().map(|p| p[0]));
+    println!("Weighted path length (I): {}", weighted_path_length_orig);
 
     // encode prediction error matrix
     let encoded = huffman_encode(prediction_err.iter());
     // print the bits
-    println!("Original image size: {} bits", prediction_err.len() * 9);
-    println!("Encoded image size: {} bits", encoded.len());
+    println!("Original image size (P): {} bits", prediction_err.len() * 9);
+    println!("Encoded image size (P): {} bits", encoded.len());
 
     // Compression ratio
-    println!("Compression ratio: {}", (prediction_err.len() * 9) as f32 / encoded.len() as f32);
+    println!("Compression ratio of (P): {}", (prediction_err.len() * 9) as f32 / encoded.len() as f32);
+
+    let weighted_path_length_pred_err = weighted_path_length(prediction_err.iter());
+    println!("Weighted path length of (P): {}", weighted_path_length_pred_err);
+
+    let huffman_tree = huffman_tree(prediction_err.iter());
+    // save to a file 
+    let path = format!("{}_huffman_tree.dot", img_name);
+    // use fmt::Display to print the tree to file
+    let mut file = std::fs::File::create(path).unwrap();
+    write!(file, "{}", huffman_tree).unwrap();
 }
 
 /// Verify that two grayscale images are equal

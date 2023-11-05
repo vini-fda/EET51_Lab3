@@ -6,7 +6,7 @@ use std::fmt;
 use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-enum HuffmanNode<T>
+pub enum HuffmanNode<T>
 where
     T: Ord + Copy,
 {
@@ -202,4 +202,32 @@ where
         }
     }
     result
+}
+
+pub fn huffman_tree<T, I>(data: I) -> HuffmanNode<T>
+where
+    T: Ord + Copy + Hash,
+    I: Iterator<Item = T> + Clone,
+{
+    let frequencies = build_histogram(data.clone());
+    build_huffman_tree(&frequencies)
+}
+
+pub fn weighted_path_length<T, I>(data: I) -> f64
+where
+    T: Ord + Copy + Hash,
+    I: Iterator<Item = T> + Clone,
+{
+    let frequencies = build_histogram(data.clone());
+    let tree = build_huffman_tree(&frequencies);
+    let mut code_map = HashMap::new();
+    generate_codes(&tree, VecDeque::new(), &mut code_map);
+
+    let mut result = 0.0;
+    // calculate the weighted path length = sum of (code length * frequency)
+    let total = frequencies.values().sum::<u32>() as f64;
+    for (byte, code) in code_map {
+        result += code.len() as f64 * frequencies[&byte] as f64;
+    }
+    result / total
 }
